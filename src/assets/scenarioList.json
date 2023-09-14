@@ -1,0 +1,44 @@
+{
+  "MapService": {
+    "name": "MapService",
+    "label": "地图服务",
+    "child": {
+      "MultiRoutePlanning1": {
+        "name": "MultiRoutePlanning1",
+        "label": "多路径规划-方式1"
+      },
+      "MultiRoutePlanning2": {
+        "name": "MultiRoutePlanning2",
+        "label": "多路径规划-方式2"
+      },
+      "LocalSearch": {
+        "name": "LocalSearch",
+        "label": "本地搜索"
+      }
+    }
+  },
+  "SpatialCalculation": {
+    "name": "SpatialCalculation",
+    "label": "空间计算",
+    "child": {
+      "PointInPolygon": {
+        "name": "PointInPolygon",
+        "label": "点位所属区域判断"
+      },
+      "PointInPolygonWithoutMap": {
+        "name": "PointInPolygonWithoutMap",
+        "label": "点位所属区域判断(无地图)"
+      }
+    }
+  },
+  "Other": {
+    "name": "Other",
+    "label": "其他",
+    "child": {
+      "RegionHighlight": {
+        "name": "RegionHighlight",
+        "label": "区域高亮"
+      }
+    }
+  }
+}
