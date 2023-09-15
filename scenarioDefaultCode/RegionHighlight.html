@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8' />
+  <title></title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.js'></script>
+  <link href='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.css' rel='stylesheet' />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id='map'></div>
+  <script>
+    // 绑定地图API的全局变量。
+    smartmapx.mapbase = 'https://dev.smartmapx.com';
+    smartmapx.apikey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYmYiOjE1MzcxODM1OTgsImRhdGEiOiJ7XCJsb2dpbl9uYW1lXCI6XCJyb290XCIsXCJnZW5kZXJcIjoyLFwidXNlcl9pZFwiOlwiZm1fc3lzdGVtX3VzZXJfcm9vdFwiLFwidXNlcl9uYW1lXCI6XCJyb290XCIsXCJ1c2VyX29yaWdpbl9pZFwiOlwiZm1fbG9jYWxcIixcInByb2R1Y3RfaWRcIjpcIlwiLFwiZXhwaXJlX3RpbWVcIjpcIlwiLFwic291cmNlX2lkXCI6XCJcIixcInR5cGVcIjpcIlwiLFwiY29ycF9pZFwiOlwiZm1fc3lzdGVtX2NvcnBcIn0iLCJleHAiOjQwOTI1OTkzNDksImp0aSI6ImFfNjhmZjBhZGY5OTcxNDQ0NThjNzViZWFiN2FjNTkzYWYifQ.W122WkT6QR4HZWbpalkpmirV9JWkDYcCkmNZoxCB_z8';
+
+    // 初始化地图。
+    const map = new smartmapx.Map({
+      container: 'map',
+      mapId: 'map_id_1',
+      center: [110.359270, 31.992832],
+      zoom: 4,
+    });
+
+    // 声明弹窗。
+    let curPopup = new smartmapx.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      anchor: 'bottom',
+    });
+
+    // 设置事件监听器，当地图完成加载时触发。
+    map.on('load', () => {
+      // 添加地图控件。
+      addControls(map);
+
+      // 添加市图层。
+      addCityLayer(map)
+        .then(data => {
+          // 缩放视图到数据范围。
+          zoomViewToData(map, data);
+        });
+
+      // 添加区县图层。
+      addDistrictLayer(map)
+        .then(data => {
+          map
+            .on('zoomend', onZoomEnd)
+            .on('mousemove', 'BeiJingDistrictFillLayer_Transparent', onMouseMove)
+            .on('mouseleave', 'BeiJingDistrictFillLayer_Transparent', onMouseLeave);
+        });
+    });
+
+    /**
+     * 添加地图控件。
+     * @param {smartmapx.Map} map
+     */
+    function addControls(map) {
+      const measureControl = new smartmapx.MeasureControl({});
+      map.addControl(measureControl, 'top-left');
+
+      const scaleControl = new smartmapx.ScaleControl({
+        maxWidth: 100,
+        unit: 'm',
+      });
+      map.addControl(scaleControl, 'bottom-left');
+
+      const nav = new smartmapx.NavigationControl();
+      map.addControl(nav, 'top-right');
+
+      const drawControl = new smartmapx.DrawControl({
+        displayControlsDefault: false,
+        controls: {
+          point: true,
+          line_string: true,
+          polygon: true,
+          trash: true
+        }
+      });
+      map.addControl(drawControl, 'top-left');
+
+      map.on('draw.create', (e) => {
+        console.log(JSON.stringify(e.features[0].geometry));
+      });
+
+      map.on('draw.update', (e) => {
+        console.log(JSON.stringify(e.features[0].geometry));
+      });
+    }
+
+    /**
+     * 添加市图层。
+     * @param {smartmapx.Map} map
+     */
+    function addCityLayer(map) {
+      return new Promise((resolve, reject) => {
+        fetch('/smartmapx-webgis-examples/geojson/bg_border.geojson') // NODE_ENV='production'
+        // fetch('/geojson/bg_border.geojson') // NODE_ENV='development'
+          .then(res => res.json())
+          .then(data => {
+            map
+              .addSource('BeiJingCity', {
+                type: 'geojson',
+                data,
+              })
+              .addLayer({
+                id: 'BeiJingCityFillLayer',
+                type: 'fill',
+                source: 'BeiJingCity',
+                layout: {
+                  visibility: 'visible',
+                },
+                paint: {
+                  'fill-color': 'rgba(184, 233, 134, 1)',
+                  'fill-opacity': 0.21,
+                },
+              })
+              .addLayer({
+                id: 'BeiJingCityBorderLayer',
+                type: 'line',
+                source: 'BeiJingCity',
+                layout: {
+                  visibility: 'visible',
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                },
+                paint: {
+                  'line-color': 'rgba(74, 144, 226, 1)',
+                  'line-width': 3,
+                  'line-opacity': 0.7,
+                },
+              });
+            resolve(data);
+          })
+          .catch(err => reject(err));
+      });
+    }
+
+    /**
+     * 添加区县图层。
+     * @param {smartmapx.Map} map
+     */
+    function addDistrictLayer(map) {
+      return new Promise((resolve, reject) => {
+        fetch('/smartmapx-webgis-examples/geojson/bg_district.geojson') // NODE_ENV='production'
+        // fetch('/geojson/bg_district.geojson') // NODE_ENV='development'
+          .then(res => res.json())
+          .then(rawData => {
+            const data = getDataWithCentroid(rawData);
+
+            map
+              .addSource('BeiJingDistrict', {
+                type: 'geojson',
+                data,
+              })
+              .addLayer({
+                id: 'BeiJingDistrictFillLayer_Transparent',
+                type: 'fill',
+                source: 'BeiJingDistrict',
+                layout: {
+                  visibility: 'none',
+                },
+                paint: {
+                  'fill-color': 'rgba(255, 255, 255, 1)',
+                  'fill-opacity': 0,
+                }
+              })
+              .addLayer({
+                id: 'BeiJingDistrictFillLayer_Highlighted',
+                type: 'fill',
+                source: 'BeiJingDistrict',
+                filter: [
+                  'all',
+                  ['==', 'code', -1],
+                ],
+                layout: {
+                  visibility: 'visible',
+                },
+                paint: {
+                  'fill-color': 'rgba(184, 233, 134, 1)',
+                  'fill-opacity': 0.4,
+                }
+              })
+              .addLayer({
+                id: 'BeiJingDistrictBorderLayer',
+                type: 'line',
+                source: 'BeiJingDistrict',
+                layout: {
+                  visibility: 'none',
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                },
+                paint: {
+                  'line-color': 'rgba(255, 0, 0, 1)',
+                  'line-width': 3,
+                  'line-opacity': 0.6,
+                }
+              });
+            resolve(data);
+          })
+          .catch(err => {
+            console.error(err);
+            reject(err);
+          });
+      });
+    }
+
+    /**
+     * 返回带有中心坐标的数据。
+     * @param {Object} data
+     */
+    function getDataWithCentroid(data) {
+      data.features.forEach(feature => {
+        const polygon = smartmapx.GeoUtils.polygon(feature.geometry.coordinates);
+        const centroidCoord = smartmapx.GeoUtils.centroid(polygon).geometry.coordinates;
+        feature.properties['centroidCoord'] = centroidCoord;
+      });
+
+      return data;
+    }
+
+    /**
+     * 缩放视图到数据范围。
+     * @param {smartmapx.Map} map
+     * @param {Object} data
+     */
+    function zoomViewToData(map, data) {
+      const bbox = smartmapx.GeoUtils.bbox(data);
+      const sw = new smartmapx.LngLat(bbox[0], bbox[1]); // sw 表示 southwest 西南角坐标。
+      const ne = new smartmapx.LngLat(bbox[2], bbox[3]); // ne 表示 northeast 东北角坐标。
+      const bounds = new smartmapx.LngLatBounds(sw, ne);
+      map.fitBounds(bounds, {
+        padding: { top: 200, bottom: 200, left: 200, right: 200 }
+      });
+    }
+
+    /**
+     * 缩放结束事件处理函数。
+     * @param {Object} e
+     */
+    function onZoomEnd(e) {
+      const zoomLevel = e.target.getZoom();
+      zoomLevel > 7 ? switchVis4Layer(e.target, 'largeScale') : switchVis4Layer(e.target, 'smallScale');
+    }
+
+    function switchVis4Layer(map, scale) {
+      const vis = scale === 'largeScale' ? true : false;
+      map
+        .setLayoutProperty('BeiJingCityFillLayer', 'visibility', vis ? 'none' : 'visible')
+        .setLayoutProperty('BeiJingCityBorderLayer', 'visibility', vis ? 'none' : 'visible')
+        .setLayoutProperty('BeiJingDistrictFillLayer_Transparent', 'visibility', vis ? 'visible' : 'none')
+        .setFilter('BeiJingDistrictFillLayer_Highlighted', ['==', 'code', -1])
+        .setLayoutProperty('BeiJingDistrictBorderLayer', 'visibility', vis ? 'visible' : 'none')
+    }
+
+    /**
+     * 鼠标移动事件处理函数。
+     * @param {Object} e
+     */
+    function onMouseMove(e) {
+      const feature = e.features[0];
+      const code = feature.properties.code;
+      e.target.setFilter('BeiJingDistrictFillLayer_Highlighted', ['==', 'code', code]);
+
+      // Popup 内容
+      // 1. 获取Popup参数
+      const info = {
+        provinceName: feature.properties.province,
+        cityName: feature.properties.city,
+        districtName: feature.properties.name,
+        districtCode: feature.properties.code,
+      };
+      const description = `<p>省：${info.provinceName}</p><dr/><p>市：${info.cityName}</p><dr/><p>区县：${info.districtName}</p><dr/><p>区县编码：${info.districtCode}</p>`;
+
+      // 2. 添加Popup
+      const centroidCoord = JSON.parse(feature.properties.centroidCoord); // TODO Why was it assigned as an array and retrieved as a string?
+      if (curPopup.isOpen()) {
+        const prevLngLat = curPopup.getLngLat();
+        if (prevLngLat.lng !== centroidCoord[0] && prevLngLat.lat !== centroidCoord[1]) {
+          curPopup.setLngLat(centroidCoord).setHTML(description);
+        }
+      } else {
+        curPopup.setLngLat(centroidCoord).setHTML(description).addTo(e.target);
+      }
+    }
+
+    /**
+     * 鼠标移出事件处理函数。
+     * @param {Object} e
+     */
+    function onMouseLeave(e) {
+      e.target.setFilter('BeiJingDistrictFillLayer_Highlighted', ['==', 'code', -1]);
+
+      // avoid highlighted area been transparented while cursor move into the popup but still in the layer range.
+      // because popup and the map which involve the layer are in different DOM tree.
+      // sorry bro! I have no idea to solve this problem.
+    }
+
+    /**
+     * 移除该应用场景下的相关资源。
+     * @param {smartmapx.Map} map
+     * @param {Object} params
+     * @param {String} params.sourceId
+     * @param {String} params.layerId
+     */
+    function destroy(map, params) {
+      map
+        .off('zoomend', onZoomEnd) // 移除缩放结束事件。
+        .off('mousemove', params.layerId, onMouseMove) // 移除鼠标移动事件。
+        .off('mouseleave', params.layerId, onMouseLeave) // 移除鼠标移出事件。
+        .removeLayer(params.layerId) // 移除图层。
+        .removeSource(params.sourceId); // 移除数据源。
+    }
+  </script>
+
+</body>
+
+</html>

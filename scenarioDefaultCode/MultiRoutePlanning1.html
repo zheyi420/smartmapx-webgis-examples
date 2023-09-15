@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <script src='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.js'></script>
+  <link href='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.css' rel='stylesheet' />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+
+    .routeAnimationDiv {
+      position: absolute;
+      top: 5px;
+      left: 50px;
+      z-index: 100;
+    }
+
+    .routingStrategyDiv {
+      background-color: #93ccde;
+      position: absolute;
+      top: 30px;
+      margin: 10px 0px 0px 0px;
+      left: 50px;
+      z-index: 100;
+      width: fit-content;
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <div class="routeAnimationDiv">
+    <button id="stopButton">停止路径动画</button>
+    <button id="startButton">开始路径动画</button>
+  </div>
+
+  <div class="routingStrategyDiv">
+    <label style="font-weight: bold;">路线规划策略选择</label>
+    <button id="minimalRoute">最短路径</button>
+    <button id="moreExpressway">多走高速</button>
+    <button id="lessToll">少收费</button>
+    <button id="recommend">推荐</button>
+  </div>
+  <script>
+    // 绑定地图API的全局变量。
+    smartmapx.mapbase = 'https://dev.smartmapx.com';
+    smartmapx.apikey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYmYiOjE1MzcxODM1OTgsImRhdGEiOiJ7XCJsb2dpbl9uYW1lXCI6XCJyb290XCIsXCJnZW5kZXJcIjoyLFwidXNlcl9pZFwiOlwiZm1fc3lzdGVtX3VzZXJfcm9vdFwiLFwidXNlcl9uYW1lXCI6XCJyb290XCIsXCJ1c2VyX29yaWdpbl9pZFwiOlwiZm1fbG9jYWxcIixcInByb2R1Y3RfaWRcIjpcIlwiLFwiZXhwaXJlX3RpbWVcIjpcIlwiLFwic291cmNlX2lkXCI6XCJcIixcInR5cGVcIjpcIlwiLFwiY29ycF9pZFwiOlwiZm1fc3lzdGVtX2NvcnBcIn0iLCJleHAiOjQwOTI1OTkzNDksImp0aSI6ImFfNjhmZjBhZGY5OTcxNDQ0NThjNzViZWFiN2FjNTkzYWYifQ.W122WkT6QR4HZWbpalkpmirV9JWkDYcCkmNZoxCB_z8';
+
+    // 初始化地图。
+    const map = new smartmapx.Map({
+      container: 'map',
+      mapId: 'map_id_1',
+      center: [110.359270, 31.992832],
+      zoom: 4,
+    });
+
+    /* 
+    const canvasStyle = document.getElementsByClassName('smartmapx-canvas')[0].style;
+    canvasStyle.position = 'relative';
+    */
+
+    // 导航策略
+    const routingStrategy = {
+      minimalRoute: 0, // 最短路径
+      moreExpressway: 1, // 多走高速
+      lessToll: 2, // 少收费
+      recommend: 3, // 推荐
+    }
+
+    // 初始化起点终点信息。
+    const PtInfo = {
+      start: {
+        lng: 113.1266686968084,
+        lat: 22.941556661622215,
+      },
+      end: {
+        lng: 113.326936609413622,
+        lat: 23.096729548525271,
+      }
+    }
+
+    // 设置路线起点终点标注。
+    const marker_start = new smartmapx.UnionMarker(
+      [PtInfo.start.lng, PtInfo.start.lat],
+      {
+        icon: './assets/img/start.png',
+        size: [20, 29]
+      }
+    );
+    marker_start.enableDragging();
+    marker_start.on('dragstart', stopAnimation);
+    marker_start.on('dragend', dragendMarkerStart);
+    const marker_end = new smartmapx.UnionMarker(
+      [PtInfo.end.lng, PtInfo.end.lat],
+      {
+        icon: './assets/img/end.png',
+        size: [20, 29]
+      }
+    );
+    marker_end.enableDragging();
+    marker_end.on('dragstart', stopAnimation);
+    marker_end.on('dragend', dragendMarkerEnd);
+
+    // 引入需进行路线规划的起点终点的地理信息。
+    const geojson_route_start_end = {
+      'type': 'FeatureCollection',
+      'features': [
+        {
+          'type': 'Feature',
+          'properties': {},
+          'geometry': {
+            'coordinates': [
+              [PtInfo.start.lng, PtInfo.start.lat],
+              [PtInfo.end.lng, PtInfo.end.lat]
+            ],
+            'type': 'MultiPoint'
+          }
+        }
+      ]
+    };
+
+    map.on('load', () => {
+      // 添加地图控件。
+      addControls(map);
+
+      zoomViewToData(map, geojson_route_start_end);
+
+      addMarker(map);
+
+      addRouteLine(map)
+        .then(() => {
+          startAnimation();
+        })
+        .catch(() => {
+          console.error('addRouteLine() error');
+        });
+    });
+
+    /**
+     * 添加地图控件。
+     * @param {smartmapx.Map} map
+     */
+    function addControls(map) {
+      const measureControl = new smartmapx.MeasureControl({});
+      map.addControl(measureControl, 'top-left');
+
+      const scaleControl = new smartmapx.ScaleControl({
+        maxWidth: 100,
+        unit: 'm',
+      });
+      map.addControl(scaleControl, 'bottom-left');
+
+      const nav = new smartmapx.NavigationControl();
+      map.addControl(nav, 'top-right');
+
+      const drawControl = new smartmapx.DrawControl({
+        displayControlsDefault: false,
+        controls: {
+          point: true,
+          line_string: true,
+          polygon: true,
+          trash: true
+        }
+      });
+      map.addControl(drawControl, 'top-left');
+
+      map.on('draw.create', (e) => {
+        console.log(JSON.stringify(e.features[0].geometry));
+      });
+
+      map.on('draw.update', (e) => {
+        console.log(JSON.stringify(e.features[0].geometry));
+      });
+    }
+
+    /**
+     * 缩放视图到数据范围。
+     * @param {smartmapx.Map} map
+     * @param {Object} data
+     */
+    function zoomViewToData(map, data) {
+      const bbox = smartmapx.GeoUtils.bbox(data);
+      const sw = new smartmapx.LngLat(bbox[0], bbox[1]); // sw 表示 southwest 西南角坐标。
+      const ne = new smartmapx.LngLat(bbox[2], bbox[3]); // ne 表示 northeast 东北角坐标。
+      const bounds = new smartmapx.LngLatBounds(sw, ne);
+      map.fitBounds(bounds, {
+        padding: { top: 200, bottom: 200, left: 200, right: 200 }
+      });
+    }
+
+    /**
+     * 添加标记。
+     */
+    function addMarker(map) {
+      marker_start.addTo(map);
+      marker_end.addTo(map);
+    }
+
+    /**
+     * 添加规划路线。
+     * @param {smartmapx.Map} map
+     * @param {Array} coords
+     */
+    function addRouteLine(map, strategy) {
+      map.getLayer('routeLine_dashed_layer') != undefined && map.removeLayer('routeLine_dashed_layer');
+      map.getLayer('routeLine_background_layer') != undefined && map.removeLayer('routeLine_background_layer');
+      map.getSource('routeLine') != undefined && map.removeSource('routeLine');
+
+      return new Promise((resolve, reject) => {
+        // 示例https://api.smartmapx.com/routing?origin=116.481028,39.989643&destination=116.434446,39.90816
+        fetch(`https://api.smartmapx.com/routing?origin=${PtInfo.start.lng},${PtInfo.start.lat}&destination=${PtInfo.end.lng},${PtInfo.end.lat}${strategy != undefined ? '&strategy=' + strategy : ''}`)
+          .then(res => res.json())
+          .then(data => {
+            const geojson = {
+              'type': 'FeatureCollection',
+              'features': [smartmapx.GeoUtils.lineString(data.route.paths[0].polyline)]
+            };
+            map
+              .addSource('routeLine', {
+                type: 'geojson',
+                data: geojson
+              })
+              .addLayer({
+                id: 'routeLine_background_layer',
+                source: 'routeLine',
+                type: 'line',
+                paint: {
+                  'line-color': '#27bbf5',
+                  'line-width': 6,
+                  'line-opacity': 0.4
+                }
+              })
+              .addLayer({
+                id: 'routeLine_dashed_layer',
+                source: 'routeLine',
+                type: 'line',
+                paint: {
+                  'line-color': '#27bbf5',
+                  'line-width': 6,
+                  'line-dasharray': [0, 4, 3]
+                }
+              });
+            resolve();
+          })
+          .catch(err => {
+            console.error(err);
+            reject();
+          });
+      });
+    }
+
+    const animationStep = 300;
+
+    let step = 0;
+    let dashArraySeq = [
+      [0, 4, 3],
+      [1, 4, 2],
+      [2, 4, 1],
+      [3, 4, 0],
+      [0, 1, 3, 3],
+      [0, 2, 3, 2],
+      [0, 3, 3, 1]
+    ];
+    let intervalID; // 用于存储 intervalID 的变量。
+
+    /**
+     * 添加动画。
+     */
+    function startAnimation() {
+      // 检查是否已经设置了interval。
+      if (intervalID) {
+        return;
+      }
+
+      intervalID = setInterval(() => {
+        step = (step + 1) % dashArraySeq.length;
+        map.setPaintProperty('routeLine_dashed_layer', 'line-dasharray', dashArraySeq[step]);
+      }, animationStep);
+
+      console.log('start -> intervalID:', intervalID);
+    }
+
+    /**
+     * 暂停动画。
+     */
+    function stopAnimation() {
+      if (!intervalID) {
+        return;
+      }
+      // 释放 intervalID
+      clearInterval(intervalID);
+      console.log('stop -> intervalID:', intervalID);
+      intervalID = null;
+    }
+
+    /**
+     * 使用新的导航策略进行路径规划。
+     */
+    function routeWithStrategy(e) {
+      stopAnimation();
+      addRouteLine(map, routingStrategy[e.target.id])
+        .then(() => {
+          startAnimation();
+        })
+        .catch(() => {
+          console.error('addRouteLine() error');
+        });
+    }
+
+    // 停止动画
+    document.getElementById('stopButton').addEventListener('click', stopAnimation);
+
+    // 播放动画
+    document.getElementById('startButton').addEventListener('click', startAnimation);
+
+    // 使用新的导航策略进行路径规划
+    document.getElementById('minimalRoute').addEventListener('click', routeWithStrategy);
+    document.getElementById('moreExpressway').addEventListener('click', routeWithStrategy);
+    document.getElementById('lessToll').addEventListener('click', routeWithStrategy);
+    document.getElementById('recommend').addEventListener('click', routeWithStrategy);
+
+    function dragendMarkerStart(e) {
+
+      PtInfo.start.lng = e.mapEvent.lngLat.lng;
+      PtInfo.start.lat = e.mapEvent.lngLat.lat;
+
+      addRouteLine(map)
+        .then(() => {
+          startAnimation();
+        })
+        .catch(() => {
+          console.error('addRouteLine() error');
+        });
+    }
+
+    function dragendMarkerEnd(e) {
+
+      PtInfo.end.lng = e.mapEvent.lngLat.lng;
+      PtInfo.end.lat = e.mapEvent.lngLat.lat;
+
+      addRouteLine(map)
+        .then(() => {
+          startAnimation();
+        })
+        .catch(() => {
+          console.error('addRouteLine() error');
+        });
+    }
+
+    /**
+     * 移除该应用场景下的相关资源。
+     * @param {smartmapx.Map} map
+     * @param {Object} params
+     */
+    function destroy(map, params) {
+      // 移除标注点相关事件
+      marker_start
+        .off('dragend', dragendMarkerStart)
+        .off('dragstart', stopAnimation);
+      marker_end
+        .off('dragend', dragendMarkerEnd)
+        .off('dragstart', stopAnimation);
+      // 移除标注点
+      marker_start.remove();
+      marker_end.remove();
+
+      // 移除图层及源
+      map
+        .removeLayer(params.layerId)
+        .removeSource(params.sourceId);
+    }
+
+  </script>
+
+</body>
+
+</html>

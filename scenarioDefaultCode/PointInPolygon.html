@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8' />
+  <title></title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.js'></script>
+  <link href='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.css' rel='stylesheet' />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id='map'></div>
+  <script>
+    // 绑定地图API的全局变量。
+    smartmapx.mapbase = 'https://dev.smartmapx.com';
+    smartmapx.apikey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYmYiOjE1MzcxODM1OTgsImRhdGEiOiJ7XCJsb2dpbl9uYW1lXCI6XCJyb290XCIsXCJnZW5kZXJcIjoyLFwidXNlcl9pZFwiOlwiZm1fc3lzdGVtX3VzZXJfcm9vdFwiLFwidXNlcl9uYW1lXCI6XCJyb290XCIsXCJ1c2VyX29yaWdpbl9pZFwiOlwiZm1fbG9jYWxcIixcInByb2R1Y3RfaWRcIjpcIlwiLFwiZXhwaXJlX3RpbWVcIjpcIlwiLFwic291cmNlX2lkXCI6XCJcIixcInR5cGVcIjpcIlwiLFwiY29ycF9pZFwiOlwiZm1fc3lzdGVtX2NvcnBcIn0iLCJleHAiOjQwOTI1OTkzNDksImp0aSI6ImFfNjhmZjBhZGY5OTcxNDQ0NThjNzViZWFiN2FjNTkzYWYifQ.W122WkT6QR4HZWbpalkpmirV9JWkDYcCkmNZoxCB_z8';
+
+    // 初始化地图。
+    const map = new smartmapx.Map({
+      container: 'map',
+      mapId: 'map_id_1',
+      center: [110.359270, 31.992832],
+      zoom: 4,
+    });
+
+    // 声明面数据。
+    let polygonData = {};
+
+    // 设置事件监听器，当地图完成加载时触发。
+    map.on('load', () => {
+      // 添加地图控件。
+      addControls(map);
+
+      // 添加面数据图层。
+      addPolygonLayer(map)
+        .then(data => {
+          // 处理分类面数据。
+          polygonData = processPolygonData(data);
+          return polygonData;
+        })
+        .then((polygonData) => {
+          // 添加点数据图层。
+          addPointLayer(map)
+            .then(res => {
+              // 缩放视图到数据范围。
+              zoomViewToData(map, res.data);
+
+              // 为点数据图层指定类型的事件添加侦听器。
+              registerListeners(map, res.layerId);
+            })
+            .catch(err => console.error(err));
+        })
+        .catch(err => console.error(err));
+    });
+
+    /**
+     * 添加地图控件。
+     * @param {smartmapx.Map} map
+     */
+    function addControls(map) {
+      const measureControl = new smartmapx.MeasureControl({});
+      map.addControl(measureControl, 'top-left');
+
+      const scaleControl = new smartmapx.ScaleControl({
+        maxWidth: 100,
+        unit: 'm',
+      });
+      map.addControl(scaleControl, 'bottom-left');
+
+      const nav = new smartmapx.NavigationControl();
+      map.addControl(nav, 'top-right');
+
+      const drawControl = new smartmapx.DrawControl({
+        displayControlsDefault: false,
+        controls: {
+          point: true,
+          line_string: true,
+          polygon: true,
+          trash: true
+        }
+      });
+      map.addControl(drawControl, 'top-left');
+
+      map.on('draw.create', (e) => {
+        console.log(JSON.stringify(e.features[0].geometry));
+      });
+
+      map.on('draw.update', (e) => {
+        console.log(JSON.stringify(e.features[0].geometry));
+      });
+    }
+
+    /**
+     * 添加面数据图层。
+     * @param {smartmapx.Map} map
+     */
+    function addPolygonLayer(map) {
+      return new Promise((resolve, reject) => {
+        fetch('/smartmapx-webgis-examples/geojson/PolygonWithHole.geojson') // NODE_ENV='production'
+        // fetch('/geojson/PolygonWithHole.geojson') // NODE_ENV='development'
+          .then(res => res.json())
+          .then(data => {
+            map
+              .addSource('PolygonWithHole', {
+                type: 'geojson',
+                data,
+              })
+              .addLayer({
+                id: 'PolygonWithHoleLayer',
+                type: 'fill',
+                source: 'PolygonWithHole',
+                paint: {
+                  'fill-color': ["get", "color"],
+                  'fill-opacity': 0.5,
+                },
+              });
+            resolve(data);
+          })
+          .catch(err => reject(err));
+      });
+    }
+
+    /**
+     * 添加点数据图层。
+     * @param {smartmapx.Map} map
+     */
+    function addPointLayer(map) {
+      return new Promise((resolve, reject) => {
+        fetch('/smartmapx-webgis-examples/geojson/PointSet.geojson') // NODE_ENV='production'
+        // fetch('/geojson/PointSet.geojson') // NODE_ENV='development'
+          .then(res => res.json())
+          .then(data => {
+            map
+              .addSource('PointSet', {
+                type: 'geojson',
+                data,
+              })
+              .addLayer({
+                id: 'PointSetLayer',
+                type: 'circle',
+                source: 'PointSet',
+                paint: {
+                  'circle-radius': 2,
+                  'circle-stroke-width': 1,
+                },
+              });
+
+            resolve({
+              sourceId: 'PointSet',
+              layerId: 'PointSetLayer',
+              data,
+            });
+          })
+          .catch(err => reject(err));
+      });
+    }
+
+    /**
+     * 处理分类面数据。
+     * @param {Object} data
+     */
+    function processPolygonData(data) {
+      const polygonData = {};
+      data.features.forEach((feature) => {
+        const name = feature.properties.name;
+        polygonData[name] = smartmapx.GeoUtils.polygon(feature.geometry.coordinates);
+      });
+      return polygonData;
+    }
+
+    /**
+     * 缩放视图到数据范围。
+     * @param {smartmapx.Map} map
+     * @param {Object} data
+     */
+    function zoomViewToData(map, data) {
+      const bbox = smartmapx.GeoUtils.bbox(data);
+      const sw = new smartmapx.LngLat(bbox[0], bbox[1]); // sw 表示 southwest 西南角坐标。
+      const ne = new smartmapx.LngLat(bbox[2], bbox[3]); // ne 表示 northeast 东北角坐标。
+      const bounds = new smartmapx.LngLatBounds(sw, ne);
+      map.fitBounds(bounds, {
+        padding: { top: 50, bottom: 50, left: 50, right: 50 }
+      });
+    }
+
+    /**
+     * 获取点所属的面（多边形）的名称。
+     * @param {Array} coord
+     * @param {Object} polygons
+     */
+    function getPolygonNameBelongTo(coord, polygons) {
+      let res;
+      const pt = smartmapx.GeoUtils.point(coord);
+      for (const key in polygons) {
+        if (smartmapx.GeoUtils.booleanPointInPolygon(pt, polygons[key])) {
+          res = key;
+          break;
+        }
+      }
+      if (!res) {
+        res = '未知区域';
+      }
+      return res;
+    }
+
+    /**
+     * 点击事件的监听函数。
+     * @param {Object} map
+     * @param {String} layerId
+     */
+    function onClick(e) {
+      const coord = e.features[0].geometry.coordinates.slice();
+      const id = e.features[0].properties.id;
+      const polygonNameBelongTo = getPolygonNameBelongTo(coord, polygonData);
+      const description = `<p>ID: ${id}</p><dr/><p>所属区域：${polygonNameBelongTo}</p>`;
+
+      // 创建一个弹出框。
+      new smartmapx.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        anchor: 'bottom',
+      })
+        .setLngLat(coord)
+        .setHTML(description)
+        .addTo(e.target); // 将弹出框添加到地图上。
+    }
+
+    /**
+     * 鼠标移入事件处理函数。
+     * @param {Object} e
+     */
+    function onMouseEnter(e) {
+      e.target.getCanvas().style.cursor = 'pointer';
+    }
+
+    /**
+     * 鼠标移出事件处理函数。
+     * @param {Object} e
+     */
+    function onMouseLeave(e) {
+      e.target.getCanvas().style.cursor = '';
+    }
+
+    /**
+     * 为指定的图层添加事件侦听器。
+     * @param {smartmapx.Map} map
+     * @param {String} layerId
+     */
+    function registerListeners(map, layerId) {
+      map
+        .on('click', layerId, onClick) // 点击事件。
+        .on('mouseenter', layerId, onMouseEnter) // 鼠标移入事件。
+        .on('mouseleave', layerId, onMouseLeave); // 鼠标移出事件。
+    }
+
+    /**
+     * 移除该应用场景下的相关资源。
+     * @param {smartmapx.Map} map
+     * @param {Object} params
+     * @param {String} params.sourceId
+     * @param {String} params.layerId
+     */
+    function destroy(map, params) {
+      map
+        .off('click', params.layerId, onClick) // 移除点击事件。
+        .off('mouseenter', params.layerId, onMouseEnter) // 移除鼠标移入事件。
+        .off('mouseleave', params.layerId, onMouseLeave) // 移除鼠标移出事件。
+        .removeLayer(params.layerId) // 移除图层。
+        .removeSource(params.sourceId); // 移除数据源。
+    }
+  </script>
+
+</body>
+
+</html>
