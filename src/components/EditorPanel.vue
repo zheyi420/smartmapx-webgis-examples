@@ -99,7 +99,7 @@ export default {
       console.log('getDefaultCodeTxt():', JSON.stringify(val));
 
       return new Promise((resolve, reject) => {
-        fetch(`/scenarioDefaultCode/${val.name}.html`)
+        fetch(`${process.env.VUE_APP_BUILD_PATH_PREFIX}/scenarioDefaultCode/${val.name}.html`)
           .then((res) => {
             return res.text();
           })

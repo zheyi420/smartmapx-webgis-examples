@@ -1,6 +1,6 @@
 <template>
   <div id="menu">
-    <div id="menu-header"><img src="/smartmapx-logo.png" style="margin: 14px 5px -3px 0px" />SmartMapX JS 场景示例</div>
+    <div id="menu-header"><img :src=imgSrc style="margin: 14px 5px -3px 0px" />SmartMapX JS 场景示例</div>
 
     <div id="menu-content">
       <ul>
@@ -32,6 +32,7 @@ export default {
       scenarioList,
       curUnfoldedCategory: '',
       curScenario: null,
+      imgSrc: process.env.VUE_APP_BUILD_PATH_PREFIX + '/smartmapx-logo.png',
     };
   },
   methods: {

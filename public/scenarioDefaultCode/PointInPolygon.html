@@ -110,7 +110,9 @@
      */
     function addPolygonLayer(map) {
       return new Promise((resolve, reject) => {
-        fetch('/geojson/PolygonWithHole.geojson')
+        // TODO
+        fetch('/smartmapx-webgis-examples/geojson/PolygonWithHole.geojson') // NODE_ENV='production'
+        // fetch('/geojson/PolygonWithHole.geojson') // NODE_ENV='development'
           .then(res => res.json())
           .then(data => {
             map
@@ -139,7 +141,9 @@
      */
     function addPointLayer(map) {
       return new Promise((resolve, reject) => {
-        fetch('/geojson/PointSet.geojson')
+        // TODO
+        fetch('/smartmapx-webgis-examples/geojson/PointSet.geojson') // NODE_ENV='production'
+        // fetch('/geojson/PointSet.geojson') // NODE_ENV='development'
           .then(res => res.json())
           .then(data => {
             map
