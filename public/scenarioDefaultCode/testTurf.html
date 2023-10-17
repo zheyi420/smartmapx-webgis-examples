@@ -6,6 +6,7 @@
 	<title></title>
 	<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 	<script src='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.js'></script>
+  <script src="https://dev.smartmapx.com/map/api/js/turf.min.js"></script>
 	<link href='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.css' rel='stylesheet' />
 	<style>
 		body {
@@ -21,16 +22,32 @@
 		smartmapx.mapbase = 'https://dev.smartmapx.com';
 		smartmapx.apikey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYmYiOjE1MzcxODM1OTgsImRhdGEiOiJ7XCJsb2dpbl9uYW1lXCI6XCJyb290XCIsXCJnZW5kZXJcIjoyLFwidXNlcl9pZFwiOlwiZm1fc3lzdGVtX3VzZXJfcm9vdFwiLFwidXNlcl9uYW1lXCI6XCJyb290XCIsXCJ1c2VyX29yaWdpbl9pZFwiOlwiZm1fbG9jYWxcIixcInByb2R1Y3RfaWRcIjpcIlwiLFwiZXhwaXJlX3RpbWVcIjpcIlwiLFwic291cmNlX2lkXCI6XCJcIixcInR5cGVcIjpcIlwiLFwiY29ycF9pZFwiOlwiZm1fc3lzdGVtX2NvcnBcIn0iLCJleHAiOjQwOTI1OTkzNDksImp0aSI6ImFfNjhmZjBhZGY5OTcxNDQ0NThjNzViZWFiN2FjNTkzYWYifQ.W122WkT6QR4HZWbpalkpmirV9JWkDYcCkmNZoxCB_z8';
 
+    // 点
 		const coord_A = [113.110576, 23.010657];
-		const pt = smartmapx.GeoUtils.point(coord_A);
-		const feature_polygon_A_coordinates = [[[113.108476,23.012057],[113.113376,23.012057],[113.113376,23.009557],[113.108476,23.009557],[113.108476,23.012057]]];
-    const polygon_A = smartmapx.GeoUtils.polygon(feature_polygon_A_coordinates);
-		const isWithin_A = smartmapx.GeoUtils.booleanPointInPolygon(pt, polygon_A);
+		const pt = turf.point(coord_A);
+
+    // 多边形
+		const polygon_A_coordinates = [[[113.108476,23.012057],[113.113376,23.012057],[113.113376,23.009557],[113.108476,23.009557],[113.108476,23.012057]]];
+    const polygon_A = turf.polygon(polygon_A_coordinates);
+
+    const isWithin_A = turf.booleanPointInPolygon(pt, polygon_A);
+
 		console.log(`是否在多边形内：${isWithin_A}`);
 
+
+
+
+
+
+
+
+
+
+
+    
     const coord_B = [113.110576, 23.010657];
     const feature_polygon_B_coordinates = [[[113.108476,23.012057],[113.113376,23.012057],[113.113376,23.009557],[113.108476,23.009557],[113.108476,23.012057]]];
-    const isWithin_B = smartmapx.GeoUtils.booleanPointInPolygon(coord_B, feature_polygon_B_coordinates);
+    const isWithin_B = turf.booleanPointInPolygon(coord_B, feature_polygon_B_coordinates);
 		console.log(`是否在多边形内：${isWithin_B}`);
 
 
