@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8' />
+  <title></title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.js'></script>
+  <script src="https://dev.smartmapx.com/map/api/js/turf.min.js"></script>
+  <link href='https://dev.smartmapx.com/map/api/js_v2.0/smartmapx.css' rel='stylesheet' />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+</body>
+
+<script>
+  // 绑定地图API的全局变量。
+  smartmapx.mapbase = 'https://dev.smartmapx.com';
+  smartmapx.apikey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYmYiOjE1MzcxODM1OTgsImRhdGEiOiJ7XCJsb2dpbl9uYW1lXCI6XCJyb290XCIsXCJnZW5kZXJcIjoyLFwidXNlcl9pZFwiOlwiZm1fc3lzdGVtX3VzZXJfcm9vdFwiLFwidXNlcl9uYW1lXCI6XCJyb290XCIsXCJ1c2VyX29yaWdpbl9pZFwiOlwiZm1fbG9jYWxcIixcInByb2R1Y3RfaWRcIjpcIlwiLFwiZXhwaXJlX3RpbWVcIjpcIlwiLFwic291cmNlX2lkXCI6XCJcIixcInR5cGVcIjpcIlwiLFwiY29ycF9pZFwiOlwiZm1fc3lzdGVtX2NvcnBcIn0iLCJleHAiOjQwOTI1OTkzNDksImp0aSI6ImFfNjhmZjBhZGY5OTcxNDQ0NThjNzViZWFiN2FjNTkzYWYifQ.W122WkT6QR4HZWbpalkpmirV9JWkDYcCkmNZoxCB_z8';
+
+  // 初始化地图。
+  const map = new smartmapx.Map({
+    container: 'map',
+    mapId: 'map_id_1',
+    center: [113.1506, 23.09743],
+    zoom: 10,
+  });
+
+  const linestring_A_coordinates = [
+    [
+      113.1506835603276,
+      23.097435369867043
+    ],
+    [
+      113.12660032550104,
+      23.06859860358837
+    ],
+    [
+      113.1499190132086,
+      23.049253405686315
+    ],
+    [
+      113.16406313523436,
+      23.081611081004
+    ]
+  ];
+
+  const geoJson_A = {
+    'type': 'FeatureCollection',
+    'features': [{
+      'type': 'Feature',
+      'properties': {},
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': linestring_A_coordinates
+      }
+    }]
+  };
+
+  const linestring_B_coordinates = [
+    [
+      113.14580125127219,
+      23.049318611552835
+    ],
+    [
+      113.1844529270341,
+      23.041147786428866
+    ],
+    [
+      113.19333236606002,
+      23.079113889303756
+    ],
+    [
+      113.18027436747667,
+      23.064457359389294
+    ],
+    [
+      113.20430108484538,
+      23.056527751437017
+    ]
+  ];
+
+  const geoJson_B = {
+    'type': 'FeatureCollection',
+    'features': [{
+      'type': 'Feature',
+      'properties': {},
+      'geometry': {
+        'type': 'LineString',
+        'coordinates': linestring_B_coordinates
+      }
+    }]
+  };
+
+  map.on('load', () => {
+    map.addSource('line_A', {
+      type: 'geojson',
+      data: geoJson_A
+    });
+    map.addLayer({
+      "id": "line_A",
+      "type": "line",
+      "source": "line_A",
+      "paint": {
+        "line-width": 3,
+        "line-opacity": 0.9,
+        "line-color": "#1199C4"
+      }
+    });
+
+    // setTimeout(changeSource, 10000);
+    setTimeout(cleanData, 5000);
+  });
+
+  const changeSource = () => {
+    console.log('changeSource');
+    map.getSource('line_A').setData(geoJson_B);
+  }
+
+  const cleanData = () => {
+    console.log('cleanData');
+    map.getSource('line_A').setData({
+      'type': 'FeatureCollection',
+      'features': []
+    
+    });
+    console.log(map.getSource('line_A'));
+  }
+
+</script>
+
+</html>

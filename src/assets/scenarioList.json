@@ -28,6 +28,10 @@
       "PointInPolygonWithoutMap": {
         "name": "PointInPolygonWithoutMap",
         "label": "点位所属区域判断(无地图)"
+      },
+      "testTurf": {
+        "name": "testTurf",
+        "label": "Turf测试"
       }
     }
   },
@@ -38,6 +42,10 @@
       "RegionHighlight": {
         "name": "RegionHighlight",
         "label": "区域高亮"
+      },
+      "testLine": {
+        "name": "testLine",
+        "label": "测试Line"
       }
     }
   }
